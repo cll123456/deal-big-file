@@ -2,7 +2,7 @@ const baseUrl = 'http://localhost:4001'
 interface IRequest {
     url: string,
     method?: string,
-    data: Document | XMLHttpRequestBodyInit | null | undefined,
+    data?: Document | XMLHttpRequestBodyInit | null | undefined,
     onProgress?: ((e: ProgressEvent) => void) | undefined,
     headers?: { [key: string]: string }
     requestList?: XMLHttpRequest[] | undefined
@@ -57,10 +57,31 @@ export function request({
 export async function post(url: string, data: Document | XMLHttpRequestBodyInit | null | undefined | { [key: string]: any }) {
     let ret = await request({
         url,
+        method: "post",
         data: JSON.stringify(data),
         headers: {
             "content-type": "application/json"
         }
     }) as { data: any }
     return JSON.parse(ret.data)
+}
+
+/**
+ * 发送get请求
+ * @param url 
+ * @param data 
+ * @returns 
+ */
+export async function get(url: string, data: { [key: string]: any }) {
+    if (!data || Object.prototype.toString.call(data) !== '[object Object]') return {}
+    // 解析Data
+    const dataStr = Object.keys(data).map(key => `${key}=${data[key]}`).join('&')
+    url = url + '?' + dataStr
+    let ret = await request({
+        url,
+        method: "get",
+    }) as { data: any }
+    return JSON.parse(ret.data)
+
+
 }

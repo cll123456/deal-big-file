@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import { ref, Ref } from 'vue'
+import { computed, ref, Ref } from 'vue'
 import SparkMD5 from "spark-md5"
 import { calcHashByWebWorker, calcHashSampleByWebWorker, calcHashSample, calcHashByIdle, calcHashSync } from './util/calcFileHash';
-import { post, request } from './util/request';
-
+import { get, post, request } from './util/request';
+import streamSaver from 'streamsaver'
 /**
  * 上传状态枚举
  */
@@ -25,6 +25,8 @@ const requestList = ref<XMLHttpRequest[]>([])
 // 文件的状态
 const status = ref(Status.wait)
 
+const uploadedList = ref([])
+
 /**
  * 选择文件
  * @param e 
@@ -40,6 +42,8 @@ const handleFileChange = async (e: Event) => {
   const res = await calcHashSample(fileList.value);
   console.timeEnd("calcHashSample");
   console.log("calcHashSample抽样计算hash" + fileList.value.name, res);
+
+
 
   // console.time("calcHashSync")
   // const hash5 = await calcHashSync(fileList.value);
@@ -61,7 +65,6 @@ const handleFileChange = async (e: Event) => {
   // const hash4 = await calcHashSampleByWebWorker(fileList.value)
   // console.timeEnd("calcHashSampleByWebWorker");
   // console.log("calcHashSampleByWebWorker 抽样web-work计算hash" + fileList.value.name, hash4);
-
 
 }
 
@@ -133,6 +136,7 @@ const upload = async () => {
     file.name,
     obj.hashValue
   );
+  uploadedList.value = uploadedList;
   // 判断文件是否存在,如果不存在，获取已经上传的切片
   if (uploaded) {
     status.value = Status.done;
@@ -151,7 +155,7 @@ const upload = async () => {
   })
 
   // 传入已经存在的切片清单
-  await uploadChunks(chunksMap.value, uploadedList);
+  await uploadChunks(chunksMap.value, uploadedList.value);
 }
 
 interface ISendReq {
@@ -221,7 +225,6 @@ const sendRequest = async (urls: ISendReq[], max = 4, retryTimes = 3) => {
       if (counter === len && counter === 0) {
         resolve(true)
       }
-      console.log(requestList.value, 'requestList.value------')
       // 有请求，有通道
       while (counter < len && max > 0) {
         max--; // 占用通道
@@ -393,17 +396,91 @@ const handleUpload1 = async () => {
   await mergeRequest(chunksSize)
 }
 
+/**
+ * 每一个方块的长度
+ */
+const cubeWidth = computed(() => {
+  return Math.ceil(Math.sqrt(chunksMap.value.length)) * 16
+})
+
+const downloadFile = async () => {
+  // StreamSaver
+
+  const url = 'http://localhost:4001/download?filename=b0d9a1481fc2b815eb7dbf78f2146855.zip'
+  const fileStream = streamSaver.createWriteStream('阿里书.pdf')
+  // 发送请求下载
+  fetch(url).then(res => {
+    const readableStream = res.body
+
+    // more optimized
+    if (window.WritableStream && readableStream?.pipeTo) {
+      return readableStream.pipeTo(fileStream)
+        .then(() => console.log('done writing'))
+    }
+
+    const writer = fileStream.getWriter()
+
+    const reader = res.body?.getReader()
+    const pump: any = () => reader?.read()
+      .then(res => res.done
+        ? writer.close()
+        : writer.write(res.value).then(pump))
+
+    pump()
+  })
+}
 
 </script>
 
 <template>
   <input type="file" @change="handleFileChange" />
-  <button @click="handleUpload1">handleUpload1</button>
-  <button @click="upload">upload</button>
+  <button @click="handleUpload1">按照网速实时分片上传</button>
+  <button @click="upload">直接把文件分为等分的片上传</button>
   <button @click="handlePause">暂停上传</button>
   <button @click="handleResume">恢复上传</button>
   <div>状态： {{ status }}</div>
+  <div>等分进度进度</div>
+  <div class="cube-container" :style="{ width: cubeWidth + 'px' }">
+    <div class="cube" v-for="chunk in chunksMap" :key="chunk.hash">
+      <div :class="{
+        'uploading': chunk.progress > 0 && chunk.progress < 100,
+        'success': chunk.progress == 100,
+        'error': chunk.progress < 0,
+      }" :style="{ height: chunk.progress + '%' }">
+        {{ chunk.index }}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <button @click="downloadFile">用流下载文件</button>
+  </div>
 </template>
 
 <style>
+.cube-container {
+  width: 100px;
+  overflow: hidden
+}
+
+.cube {
+  width: 14px;
+  height: 14px;
+  line-height: 12px;
+  border: 1px solid black;
+  background: #eee;
+  float: left
+}
+
+.cube .success {
+  background: #67C23A
+}
+
+.cube .uploading {
+  background: #409EFF
+}
+
+.cube .error {
+  background: #F56C6C
+}
 </style>
