@@ -58,7 +58,17 @@ server.on("request", async (req, res: httpServerResponse) => {
       await ctrl.handleVerify(req, res)
       return
     }
-  }
+    if (req.url === '/download') {
+      await ctrl.handleDownload(req, res)
+      return
+    }
 
+  }
+  if (req.method === "GET") {
+    if (req.url?.indexOf('/download') === 0) {
+      await ctrl.handleDownload(req, res)
+      return
+    }
+  }
 })
 server.listen(4001, () => console.log("正在监听 4001 端口"))

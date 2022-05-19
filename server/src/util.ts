@@ -1,8 +1,8 @@
-import path from 'path'
+import path, { resolve } from 'path'
 import fse from 'fs-extra'
 import http from 'http'
 import { WriteStream, } from 'fs'
-
+import url from 'url'
 /**
  * 解析post的数据
  * @param req 
@@ -17,6 +17,18 @@ export function resolvePost(req: http.IncomingMessage) {
     req.on("end", () => {
       resolve(JSON.parse(chunk))
     })
+  })
+}
+
+/**
+ * 解析get的请求参数
+ * @param req 
+ * @returns 
+ */
+export function resolveGet(req: http.IncomingMessage): Promise<url.UrlWithParsedQuery> {
+  return new Promise(resolve => {
+    const res = url.parse(req.url as string, true)
+    resolve(res)
   })
 }
 

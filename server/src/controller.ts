@@ -1,8 +1,9 @@
 import path from 'path'
 import fse from 'fs-extra'
-import { resolvePost, pipeStream, extractExt, getUploadedList, mergeFiles, sleep } from './util'
+import { resolvePost, pipeStream, extractExt, getUploadedList, mergeFiles, sleep, resolveGet } from './util'
 import multiparty from 'multiparty'
 import http from 'http'
+import { UrlWithParsedQuery } from 'url'
 
 export default class Controller {
   /**
@@ -145,5 +146,48 @@ export default class Controller {
         })
       )
     })
+  }
+
+  /**
+   * 获取文件的大小,用于分片下载
+   * @param req 
+   * @param res 
+   */
+  async getFileSize(req: http.IncomingMessage, res: http.ServerResponse) {
+    // 获取文件名称
+    const resp: UrlWithParsedQuery = await resolveGet(req)
+    const filePath = path.resolve(this.UPLOAD_DIR, resp.query.filename as string)
+    // 判断文件是否存在
+    if (fse.existsSync(filePath)) {
+      // 返回文件的大小
+      const size = fse.statSync(filePath).size
+      res.end(JSON.stringify({
+        code: 200,
+        size,
+      }))
+    } else {
+      res.end(JSON.stringify({
+        code: 500,
+        message: "file not exits"
+      }))
+    }
+
+  }
+  /**
+   * 文件下载
+   * @param req  
+   * @param res 
+   */
+  async handleDownload(req: http.IncomingMessage, res: http.ServerResponse) {
+    // 获取文件名称
+    const resp: UrlWithParsedQuery = await resolveGet(req)
+    const filePath = path.resolve(this.UPLOAD_DIR, resp.query.filename as string)
+    // 判断文件是否存在
+    if (fse.existsSync(filePath)) {
+      // 创建流来读取文件并下载
+      const stream = fse.createReadStream(filePath)
+      // 写入文件
+      stream.pipe(res)
+    }
   }
 }
