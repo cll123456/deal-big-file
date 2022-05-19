@@ -84,9 +84,20 @@ export async function mergeFiles(files: string[], dest: string, size: number[]) 
  * @returns 
  */
 export async function getUploadedList(dirPath: string) {
-  return fse.existsSync(dirPath)
-    ? (await fse.readdir(dirPath)).filter(name => name[0] !== '.') // 过滤诡异的隐藏文件
-    : []
+  const isExitFile = fse.existsSync(dirPath);
+  // 文件存在
+  if (isExitFile) {
+    const files = await fse.readdir(dirPath)
+    // 删除掉最后一个块，防止最后一块没有上传完成
+    fse.unlinkSync(files[files.length - 1])
+    files.pop()
+    return files.filter(name => name[0] !== '.')
+  } else {
+    return []
+  }
+  // return fse.existsSync(dirPath)
+  //   ? (await fse.readdir(dirPath)).filter(name => name[0] !== '.') // 过滤诡异的隐藏文件
+  //   : []
 }
 
 /**
