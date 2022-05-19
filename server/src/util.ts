@@ -61,6 +61,7 @@ export async function mergeFiles(files: string[], dest: string, size: number[]) 
       })
     )
   }))
+
 }
 
 

@@ -75,6 +75,10 @@ export default class Controller {
     const ext = extractExt(filename)
     const filePath = path.resolve(this.UPLOAD_DIR, `${fileHash}${ext}`)
     await this.mergeFileChunk(filePath, fileHash, size)
+    // 合并后删除空目录
+    const chunkDir = path.resolve(this.UPLOAD_DIR, fileHash)
+    fse.rmdirSync(chunkDir);
+
     res.end(
       JSON.stringify({
         code: 200,
