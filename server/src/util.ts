@@ -88,8 +88,9 @@ export async function getUploadedList(dirPath: string) {
   // 文件存在
   if (isExitFile) {
     const files = await fse.readdir(dirPath)
+    const delPath = path.resolve(dirPath, files[files.length - 1])
     // 删除掉最后一个块，防止最后一块没有上传完成
-    fse.unlinkSync(files[files.length - 1])
+    fse.unlinkSync(delPath)
     files.pop()
     return files.filter(name => name[0] !== '.')
   } else {
