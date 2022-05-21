@@ -391,7 +391,6 @@ const handleUpload1 = async () => {
     chunksSize.push(offset)
     count++
   }
-  console.log(chunksSize, '-----chunksSize')
   // 可以发送合并操作了
   await mergeRequest(chunksSize)
 }
@@ -407,7 +406,7 @@ const downloadFile = async () => {
   // StreamSaver
 
   const url = 'http://localhost:4001/download?filename=b0d9a1481fc2b815eb7dbf78f2146855.zip'
-  const fileStream = streamSaver.createWriteStream('阿里书.pdf')
+  const fileStream = streamSaver.createWriteStream('b0d9a1481fc2b815eb7dbf78f2146855.zip')
   // 发送请求下载
   fetch(url).then(res => {
     const readableStream = res.body
